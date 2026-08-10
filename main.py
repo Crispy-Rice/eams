@@ -28,21 +28,21 @@ app = FastAPI(
     description="学生/教师管理、选课选老师、分班、注册登录一体化 API",
     version="1.0.0",
 )
-#
-# # 项目根目录（挂载静态页用绝对路径，避免切换目录找不到）
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# # 挂载静态页面（登录/注册/管理后台，由后端直接提供）
-# app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+# 项目根目录（挂载静态页用绝对路径，避免切换目录找不到）
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 挂载静态页面（登录/注册/管理后台，由后端直接提供）
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 #注册全局异常处理 (统一返回格式）
 register_exception_handlers(app)
 
 #挂载所有模块化路由
 app.include_router(auth_router)
 
-# 根路径：重定向到登录页面
-# @app.get("/")  # 路由装饰器：注册根路径 GET 接口，重定向到登录页
-# def root():
-#     return RedirectResponse(url="/static/login.html")
+#根路径：重定向到登录页面
+@app.get("/")  # 路由装饰器：注册根路径 GET 接口，重定向到登录页
+def root():
+    return RedirectResponse(url="/static/login.html")
 
 # 本地直接运行入口（Windows 开发环境）
 if __name__ == "__main__":
