@@ -220,6 +220,7 @@ async function loadTeachers(keyword='') {
     document.getElementById('teacherBody').innerHTML = list.map(t => `
         <tr><td>${t.id}</td><td>${t.name}</td><td>${t.gender}</td>
         <td>${t.age}</td><td>${t.subject}</td><td>${t.phone}</td>
+        <td>${t.score ?? 0}</td><td>${t.gangwei || '任课教师'}</td>
         <td>
             <button class="btn btn-blue" onclick="openTeacherModal('edit', ${t.id})">编辑</button>
             <button class="btn btn-red" onclick="delTeacher(${t.id})">删除</button>
@@ -246,16 +247,20 @@ async function openTeacherModal(mode, id) {
         <div class="field"><input id="t_age" type="number" placeholder="年龄（20-70）" value="${prefill.age ?? 30}"></div>
         <div class="field"><input id="t_subject" placeholder="教授科目" value="${prefill.subject || ''}"></div>
         <div class="field"><input id="t_phone" placeholder="联系电话" value="${prefill.phone || ''}"></div>
+        <div class="field"><input id="t_score" type="number" placeholder="教学评估分数（0-100）" value="${prefill.score ?? 0}" min="0" max="100"></div>
     `);
     modalOnOk = async () => {
         const name = document.getElementById('t_name').value.trim();
         const subject = document.getElementById('t_subject').value.trim();
         const ageInput = document.getElementById('t_age').value;
+        const scoreInput = document.getElementById('t_score').value;
         if (!name) { alert('请填写教师姓名'); return; }
         if (!subject) { alert('请填写教授科目'); return; }
         const age = Number(ageInput);
         if (!ageInput || isNaN(age) || age < 20 || age > 70) { alert('年龄需为 20-70 之间的数字'); return; }
-        const body = { name, gender: document.getElementById('t_gender').value, age, subject, phone: document.getElementById('t_phone').value.trim() };
+        const score = scoreInput === '' ? 0 : Number(scoreInput);
+        if (isNaN(score) || score < 0 || score > 100) { alert('教学评估分数需为 0-100 之间的数字'); return; }
+        const body = { name, gender: document.getElementById('t_gender').value, age, subject, phone: document.getElementById('t_phone').value.trim(), score };
         if (mode === 'add') {
             await api('/teachers/add', 'POST', body);
         } else {

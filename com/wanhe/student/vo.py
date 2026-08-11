@@ -11,8 +11,8 @@ class StudentCreate(BaseModel):
     gender: str = Field('男', max_length=10, description="性别")
     age: int = Field(..., ge=10, le=100, description="年龄")
     grade: str = Field('高一', max_length=20, description="年级")
-    class_id: int = Field(None, description="班级ID（可空，稍后分班）")
-    teacher_id: int = Field(None, description="教师ID（可空，稍后选老师）")
+    class_id: int | None = Field(None, description="班级ID（可空，稍后分班）")
+    teacher_id: int | None = Field(None, description="教师ID（可空，稍后选老师）")
     enrollment_date: str = Field('2025-09-01', description="入学日期 YYYY-MM-DD")
 
 class StudentUpdate(BaseModel):

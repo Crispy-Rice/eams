@@ -139,3 +139,27 @@ INSERT INTO users (username, password, role) VALUES
 
 -- 给学生表追加学籍状态字段
 ALTER TABLE students ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT '在校' COMMENT '学籍状态：在校/休学/复学/退学';
+
+---- ============================================================
+---- 兼容老库：若教师表缺少 score/gangwei 字段则自动补全
+---- ============================================================
+--SET @dbname = 'school_db';
+--SET @tablename = 'teachers';
+
+---- score：教学评估分数
+--SET @columnname = 'score';
+--SET @preparedStatement = (SELECT IF(
+--  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+--   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = @columnname) = 0,
+--  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' INT COMMENT ''教学评估分数'''),
+--  'SELECT 1'));
+--PREPARE stmt FROM @preparedStatement; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+--
+---- gangwei：岗位（班主任/任课教师）
+--SET @columnname = 'gangwei';
+--SET @preparedStatement = (SELECT IF(
+--  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+--   WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = @columnname) = 0,
+--  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' VARCHAR(30) COMMENT ''岗位（班主任/任课教师）'''),
+--  'SELECT 1'));
+--PREPARE stmt FROM @preparedStatement; EXECUTE stmt; DEALLOCATE PREPARE stmt;
