@@ -136,3 +136,6 @@ INSERT INTO student_course (student_id, course_id) VALUES
 -- 管理员账号（密码 admin123，种子为明文，登录后自动升级为 bcrypt 哈希）
 INSERT INTO users (username, password, role) VALUES
     ('admin', 'admin123', 'admin');
+
+-- 给学生表追加学籍状态字段
+ALTER TABLE students ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT '在校' COMMENT '学籍状态：在校/休学/复学/退学';

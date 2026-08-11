@@ -2,6 +2,10 @@
 from com.wanhe.common.db import Database
 
 class StudentModel:
+    status_choices = ["在读", "休学", "复学", "退学"]
+
+    def __init__(self):
+        self.status = "在读"
     """
         学生模块
     """
@@ -185,6 +189,33 @@ class StudentModel:
                 """
                 delete from students where id = %s
                 """,(student_id,)
+            )
+        finally:
+            db.close()
+
+    def get_grade(self, grade=''):
+        sql, params = self.base_sql()
+        if grade:
+            sql += "where s.grade = %s"
+            params.append(grade)
+        sql += " order by s.id"
+        db = Database()
+        try:
+            return db.query_all(sql, tuple(params))
+        finally:
+            db.close()
+
+    def update_status(self, student_id, status):
+        """
+        修改学生学籍状态
+        :param student_id: 学生ID
+        :param status: 新学籍状态
+        """
+        db = Database()
+        try:
+            return db.execute(
+                "update students set status = %s where id = %s",
+                (status, student_id)
             )
         finally:
             db.close()

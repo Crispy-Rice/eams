@@ -1,3 +1,4 @@
+# 数据校验 + 类型转换
 # BaseModel 定义请求参数结构、自动校验数据格式
 # Field 给字段设置必填、范围、默认值
 from pydantic import BaseModel, Field
@@ -35,8 +36,14 @@ class TeacherAssign(BaseModel):
     '''
     teacher_id: int = Field(..., description="目标教师ID")
 
-# class GardeChoose(BaseModel):
-#     '''
-#     通过年级筛选学生
-#     '''
-#     garde: str | None = None
+class GardeChoose(BaseModel):
+    '''
+    通过年级筛选学生
+    '''
+    garde: str | None = None
+
+class StudentStatus(BaseModel):
+    '''
+    学籍状态管理
+    '''
+    status: str = Field(..., description="在读，休学，复学，退学")
