@@ -18,3 +18,5 @@ class LoginUser(BaseModel):
     """登录请求体"""
     username: str = Field(..., description="用户名")
     password: str = Field(..., description="密码")
+    captcha_token: str = Field(..., description="验证码 token（由 GET /auth/captcha 返回）")
+    captcha_code: str = Field(..., min_length=4, max_length=4, description="用户输入的验证码（4 位，不区分大小写）")

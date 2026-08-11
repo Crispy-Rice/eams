@@ -7,6 +7,7 @@ from fastapi import APIRouter,HTTPException
 
 from com.wanhe.auth.model import UserModel
 from com.wanhe.auth.vo import RegisterUser,LoginUser
+from com.wanhe.auth.captcha import generate, verify
 from com.wanhe.student.model import StudentModel
 from com.wanhe.common.response import  success
 
@@ -58,14 +59,29 @@ def register_user(user: RegisterUser):
         msg="注册成功"
     )
 
+@router.get("/captcha") # 获取图片验证码（公开接口，登录前调用）
+def get_captcha():
+    """
+    获取图片验证码：生成 4 位图文验证码并返回 base64 图片 + token
+    :return: {"token", "image"}  前端将 image 赋给 <img src>，登录时回传 token
+    """
+    token, image = generate()
+    logger.info("生成验证码 token=%s", token)
+    return success({"token": token, "image": image}, msg="获取验证码成功")
+
 @router.post("/login") # 路由装饰器：注册 POST 新增接口
 def login_user(user: LoginUser):
     """
-    登录：校验用户名和密码（明文比对，教学演示）
-    :param data: 登录请求体（用户名/密码）
+    登录：先校验图片验证码，再校验用户名和密码（明文比对，教学演示）
+    :param data: 登录请求体（用户名/密码/验证码 token/验证码）
     :return: {"user_id", "username", "role", "student_id"}
-    :raises HTTPException 400: 用户名或密码错误
+    :raises HTTPException 400: 验证码错误或已过期 / 用户名或密码错误
     """
+    # 0. 先校验图片验证码（防暴力破解；一次性使用，校验失败需重新获取）
+    if not verify(user.captcha_token, user.captcha_code):
+        logger.warning("登录失败 验证码错误 用户：%s", user.username)
+        raise HTTPException(status_code=400, detail="验证码错误或已过期")
+
     userSearch = UserModel().find_by_username(user.username)
 
     #用户不存在或密码错误
