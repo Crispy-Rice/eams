@@ -35,10 +35,16 @@ async function register() {
     const json = await resp.json();
 
     if (json.code === 0) {
-        // 注册成功：绿色提示并稍后跳转登录页
+        const d = json.data;
+        // 注册成功并自动登录：保存登录态（与 login.js 一致），直接进入后台，无需再登录
+        localStorage.setItem('username', d.username);
+        localStorage.setItem('role', d.role);
+        localStorage.setItem('student_id', d.student_id);
+        localStorage.setItem('user_id', d.user_id);
+        // 绿色提示并直接跳转管理后台
         msg.style.color = '#52c41a';
-        msg.textContent = json.msg + '，请登录';
-        setTimeout(() => location.href = '/static/login.html', 800);
+        msg.textContent = json.msg + '，跳转中...';
+        setTimeout(() => location.href = '/static/dashboard.html', 800);
     } else {
         // 注册失败（如用户名已存在），红色提示后端 msg
         msg.textContent = json.msg || '注册失败';

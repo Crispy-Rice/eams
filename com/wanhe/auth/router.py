@@ -50,14 +50,17 @@ def register_user(user: RegisterUser):
         student_id=student_id,
     )
 
-    logger.info("注册成功 用户：%s",user.username)
-    return success(
-        {
-            "student_id": student_id,
-            "username": user.username,
-        },
-        msg="注册成功"
-    )
+    # 4. 注册成功即自动登录：查询刚创建的用户，返回与 /auth/login 完全一致的登录态信息
+    #    （演示架构无真实 token/session，登录态=客户端拿到 user 信息并存入 localStorage）
+    userSearch = UserModel().find_by_username(user.username)
+
+    logger.info("注册成功并自动登录 用户：%s", user.username)
+    return success({
+        "user_id": userSearch['id'],
+        "username": userSearch['username'],
+        "role": userSearch['role'],
+        "student_id": userSearch['student_id'],
+    }, msg="注册成功，已自动登录")
 
 @router.get("/captcha") # 获取图片验证码（公开接口，登录前调用）
 def get_captcha():

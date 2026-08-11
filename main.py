@@ -12,7 +12,7 @@ EAMS 学校教务管理系统 - 程序入口
 import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 
 # 导入各业务模块子路由（每个模块一个 APIRouter）
 from com.wanhe.auth.router import router as auth_router       # 认证（公开）
@@ -35,8 +35,28 @@ app = FastAPI(
 
 # 项目根目录（挂载静态页用绝对路径，避免切换目录找不到）
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# 挂载静态页面（登录/注册/管理后台，由后端直接提供）
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+
+class NoCacheStaticFiles(StaticFiles):
+    """静态文件挂载，但强制不缓存（no-store）。
+
+    原因：本项目首页(register.html/login.html)本身没有版本号查询串，
+    浏览器会连同其引用的 JS/CSS 一起缓存；改了前端代码后用户刷新仍加载旧脚本，
+    导致"改了代码却不生效"。统一加 no-store 从根上避免这类前端缓存问题。
+    """
+
+    def file_response(self, full_path, stat_result, scope, status_code=200):
+        resp: Response = super().file_response(full_path, stat_result, scope, status_code=status_code)
+        resp.headers.update({
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        })
+        return resp
+
+
+# 挂载静态页面（登录/注册/管理后台，由后端直接提供，禁止浏览器缓存）
+app.mount("/static", NoCacheStaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 # 注册全局异常处理（统一错误返回格式 {code, msg, data}）
 register_exception_handlers(app)
