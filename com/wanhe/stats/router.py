@@ -32,16 +32,20 @@ def gender_ratio():
     logger.info("查询在校学生男女占比")
     return success(StatsModel().gender_ratio())
 
+@router.get("/")
+def index(username: str = "访客", role: str = "guest"):
+    """
+    首页欢迎语：显示当前登录用户（教学演示：身份由前端查询参数传递）
+    :param username: 当前登录用户名（前端登录后从 localStorage 读取并携带）
+    :param role: 当前登录用户角色（admin / teacher / student）
+    :return: {"message": "欢迎使用学校教务管理系统，<角色> <用户名>！"}
+    """
+    role_map = {"admin": "管理员", "teacher": "教师", "student": "学生"}
+    role_name = role_map.get(role, "用户")
+    logger.info("访问首页 用户:%s 角色:%s", username, role)
+    return success({"message": f"欢迎使用学校教务管理系统，{role_name} {username}！"})
 
 
-
-
-
-
-
-
-
-# ===== 新增：各年级学生人数统计接口（柱状图数据源） =====
 @router.get("/grade-count")  # 路由装饰器：注册 GET 查询接口
 def grade_count():
     """查：各年级学生人数（柱状图数据源）"""
@@ -49,9 +53,15 @@ def grade_count():
     return success(StatsModel().grade_count())
 
 
-# ===== 新增：每门课程选课人数排行接口（柱状图数据源） =====
 @router.get("/course-selection")  # 路由装饰器：注册 GET 查询接口
 def course_selection():
     """查：每门课程选课人数排行（柱状图数据源）"""
     logger.info("查询每门课程选课人数")
     return success(StatsModel().course_selection())
+
+
+@router.get("/gender-grade")  # 路由装饰器：注册 GET 查询接口
+def gender_grade():
+    """查：各年级男女生人数（堆叠柱状图数据源）"""
+    logger.info("查询各年级男女生人数")
+    return success(StatsModel().gender_grade())

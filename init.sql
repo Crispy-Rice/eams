@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS teachers (
     age         INT                                     COMMENT '年龄',
     subject     VARCHAR(50)                             COMMENT '教授科目',
     phone       VARCHAR(20)                             COMMENT '联系电话',
+    score       INT                                     COMMENT '教学评估分数',
+    gangwei     VARCHAR(30)                             COMMENT '岗位（班主任/任课教师）',
     create_time DATETIME    DEFAULT CURRENT_TIMESTAMP   COMMENT '创建时间'
 ) COMMENT '教师表';
 
@@ -43,6 +45,9 @@ CREATE TABLE IF NOT EXISTS classes (
     name            VARCHAR(50) NOT NULL                    COMMENT '班级名称，如：高一(1)班',
     grade           VARCHAR(20)                             COMMENT '年级：高一/高二/高三',
     head_teacher_id INT                                     COMMENT '班主任教师ID',
+    if_youxiu       VARCHAR(20)                             COMMENT '本班级是否为优秀班级',
+    student_num     INT         DEFAULT 0                   COMMENT '本班学生数目',
+    graduation_year INT         NULL                        COMMENT '本班学生毕业年份',
     create_time     DATETIME    DEFAULT CURRENT_TIMESTAMP   COMMENT '创建时间'
 ) COMMENT '班级表';
 

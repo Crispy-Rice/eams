@@ -1,4 +1,4 @@
-# 导入com.wanhe.common.db.py下封装的数据库
+# 导入com.wanhe.common.db下封装的数据库
 from com.wanhe.common.db import Database
 
 class StudentModel:
@@ -14,8 +14,8 @@ class StudentModel:
         select s.*,
                c.name as class_name,
                t.name as teacher_name,
-        (select count(*) from student_course sc where sc.student_id = s.id as course_count)
-        from student s
+        (select count(*) from student_course sc where sc.student_id = s.id) as course_count
+        from students s
         left join classes c on c.id = s.class_id
         left join teachers t on t.id = s.teacher_id
         """
@@ -36,7 +36,7 @@ class StudentModel:
         sql += "order by s.id"
         db = Database()
         try:
-            db.query_all(sql, tuple(params))
+            return db.query_all(sql, tuple(params))
         finally:
             db.close()
 
@@ -62,7 +62,7 @@ class StudentModel:
             total = db.query_one(
                 "select count(*) as 总数 from students s " + where, tuple(params)
             )["总数"]
-            items = db.quray_all(
+            items = db.query_all(
                 # limit限制一页的数据条数，offset代表跳过前面多少条数据，OFFSET = (页码 - 1) × 每页条数
                 # 元组之间可以用 + 合并成一个完整大元组
                 base_sql + where + "order by s.id limit %s offset %s", tuple(params) + (page_size, (page - 1)*page_size)
@@ -78,13 +78,13 @@ class StudentModel:
         """
         db = Database()
         try:
-            return db.query.one(
+            return db.query_one(
                 """
                 select s.*, c.name as class_name, t.name as teacher_name
                 from students s 
                 left join classes c on s.class_id = c.id
                 left join teachers t on s.teacher_id = t.id
-                where s.id = %S
+                where s.id = %s
                 """, (student_id,)      # 末尾加逗号，Python 才会识别为元组
             )
         finally:
@@ -105,8 +105,8 @@ class StudentModel:
         try:
             return db.insert(
                 """
-                insert into students (name, gender, grade, class_id, teacher_id, enrollment_date)
-                values (%s, %s, %s, %s, %s, %s),
+                insert into students (name, gender, age, grade, class_id, teacher_id, enrollment_date)
+                values (%s, %s, %s, %s, %s, %s, %s)
                 """,(name, gender, age, grade, class_id, teacher_id, enrollment_date)
             )
         finally:
@@ -147,11 +147,11 @@ class StudentModel:
         finally:
             db.close()
 
-    def change_teacher(self, teacher_id, student_id):
+    def change_teacher(self, student_id, teacher_id):
         """
         修改学生所属老师ID
-        :param teacher_id: 老师ID
         :param student_id: 学生ID
+        :param teacher_id: 老师ID
         """
         db = Database()
         try:

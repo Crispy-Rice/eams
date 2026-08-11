@@ -7,7 +7,7 @@ from fastapi import APIRouter,HTTPException
 
 from com.wanhe.auth.model import UserModel
 from com.wanhe.auth.vo import RegisterUser,LoginUser
-# from com.wanhe.student.model import StudentModel
+from com.wanhe.student.model import StudentModel
 from com.wanhe.common.response import  success
 
 logger=logging.getLogger(__name__)
@@ -31,28 +31,28 @@ def register_user(user: RegisterUser):
         raise  HTTPException(status_code = 400,detail="用户名已存在")
 
     #2 创建学生记录（初始未分班 未选老师）
-    # student_id = StudentModel().create(
-    #     name=user.name,
-    #     gender=user.gender,
-    #     age=user.age,
-    #     grade='高一',
-    #     class_id=None,
-    #     teacher_id=None,
-    #     enrollment_date='2025-09-01',
-    # )
+    student_id = StudentModel().create(
+        name=user.name,
+        gender=user.gender,
+        age=user.age,
+        grade='高一',
+        class_id=None,
+        teacher_id=None,
+        enrollment_date='2025-09-01',
+    )
 
     # 3. 创建登录账号，关联学生ID
     UserModel().create(
         username=user.username,
         password=user.password,
         role='student',
-        # student_id=student_id,
+        student_id=student_id,
     )
 
-    logger.info("注册成功 用户：s%",user.username)
+    logger.info("注册成功 用户：%s",user.username)
     return success(
         {
-            # "student_id": user.student_id,
+            "student_id": student_id,
             "username": user.username,
         },
         msg="注册成功"

@@ -19,7 +19,7 @@ from com.wanhe.auth.router import router as auth_router       # 认证（公开�
 from com.wanhe.student.router import router as student_router   # 学生
 from com.wanhe.teacher.router import router as teacher_router   # 教师
 from com.wanhe.classes.router import router as classes_router   # 班级
-# from com.wanhe.course.router import router as course_router     # 课程/选课
+from com.wanhe.course.router import router as course_router     # 课程/选课
 from com.wanhe.stats.router import router as stats_router       # 统计分析
 
 # 导入公共模块（日志配置需在启动时加载，供各业务模块 logger 使用）
@@ -46,7 +46,7 @@ app.include_router(auth_router)
 app.include_router(student_router)
 app.include_router(teacher_router)
 app.include_router(classes_router)
-# app.include_router(course_router)
+app.include_router(course_router)
 app.include_router(stats_router)
 
 
