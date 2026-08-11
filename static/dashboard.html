@@ -67,6 +67,27 @@
                             <div id="genderChart" class="chart"></div>
                         </div>
                     </div>
+
+
+
+
+
+
+
+
+
+
+                    <!-- ===== 新增：第二行图表区（各年级人数 + 每门选课人数） ===== -->
+                    <div class="chart-row">
+                        <div class="card chart-card">
+                            <h2>各年级学生人数</h2>
+                            <div id="gradeChart" class="chart"></div>
+                        </div>
+                        <div class="card chart-card">
+                            <h2>每门选课人数</h2>
+                            <div id="courseChart" class="chart"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 学生管理面板 -->
@@ -133,7 +154,7 @@
                             <button class="btn btn-blue" onclick="openClassModal('add')">新增班级</button>
                         </div>
                         <table>
-                            <thead><tr><th>ID</th><th>班级名</th><th>年级</th><th>班主任</th><th>是否为优秀班级</th><th>学生数量</th><th>毕业年份</th><th>操作</th></tr></thead>
+                            <thead><tr><th>ID</th><th>班级名</th><th>年级</th><th>班主任</th><th>操作</th></tr></thead>
                             <tbody id="classBody"></tbody>
                         </table>
                     </div>
@@ -158,7 +179,7 @@
     </div>
 
     <script src="/static/js/vendor/echarts.min.js"></script>
-    <script src="/static/js/common.js?v=2"></script>
-    <script src="/static/js/dashboard.js?v=2"></script>
+    <script src="/static/js/common.js"></script>
+    <script src="/static/js/dashboard.js"></script>
 </body>
 </html>

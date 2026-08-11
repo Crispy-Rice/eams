@@ -49,21 +49,16 @@ class StatsModel:
         finally:
             db.close()
 
-    def get_total(self):
-        """
-                统计在校学生男女占比，供饼状图展示
-                :return: [{gender, cnt}, ...]（男/女各自人数）
-                """
-        db = Database()
-        try:
-            rows = db.query_all(
-                "SELECT gender, COUNT(*) AS cnt FROM students GROUP BY gender"
-            )
-            logger.info("统计在校学生男女占比，返回 %s 条", len(rows))
-            return rows
-        finally:
-            db.close()
 
+
+
+
+
+
+
+
+
+    # ===== 新增：各年级学生人数统计 =====
     def grade_count(self):
         """
         统计各年级学生人数，供柱状图展示
@@ -80,9 +75,10 @@ class StatsModel:
         finally:
             db.close()
 
+    # ===== 新增：每门课程选课人数统计 =====
     def course_selection(self):
         """
-        统计每门课程选课人数（含无人选的课，供选课热度排行）
+        统计每门课程选课人数（含无人选的课）
         LEFT JOIN：无人选的课程也返回 cnt=0
         :return: [{course_name, cnt}, ...]（按选课人数降序）
         """
@@ -97,23 +93,3 @@ class StatsModel:
             return rows
         finally:
             db.close()
-
-    def gender_grade(self):
-        """
-        统计各年级男女生人数，供堆叠柱状图展示
-        :return: [{grade, gender, cnt}, ...]（按年级排序）
-        """
-        db = Database()
-        try:
-            rows = db.query_all(
-                "SELECT grade, gender, COUNT(*) AS cnt FROM students "
-                "GROUP BY grade, gender ORDER BY grade"
-            )
-            logger.info("统计各年级男女生人数，返回 %s 条", len(rows))
-            return rows
-        finally:
-            db.close()
-
-
-
-

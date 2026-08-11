@@ -1,5 +1,5 @@
 # 导入com.wanhe.common.db.py下封装的数据库
-from com.wanhe.common.db.py import Database
+from com.wanhe.common.db import Database
 
 class StudentModel:
     """

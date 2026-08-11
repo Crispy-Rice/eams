@@ -151,7 +151,6 @@ tbody tr:last-child td { border-bottom: none; }
 .modal-close:hover { color: #333; }
 .modal-body { margin-bottom: 16px; }
 .modal-body .field { margin-bottom: 14px; }
-.field-label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
 .modal-footer {
     display: flex;
     justify-content: flex-end;
