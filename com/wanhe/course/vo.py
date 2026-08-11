@@ -13,8 +13,6 @@ class CourseCreate(BaseModel):
     name: str = Field(..., max_length=50, description="课程名称")
     credit: int = Field(1, ge=1, le=10, description="学分（1-10）")
     teacher_id: int = Field(None, description="授课教师ID")
-    capacity: int = Field(None, ge=1, description="课程容量上限（不填表示不限）")
-    prerequisite_id: int = Field(None, description="先修课程ID")
 
 
 class CourseUpdate(BaseModel):
@@ -22,8 +20,6 @@ class CourseUpdate(BaseModel):
     name: str = Field(..., max_length=50, description="课程名称")
     credit: int = Field(1, ge=1, le=10, description="学分")
     teacher_id: int = Field(None, description="授课教师ID")
-    capacity: int = Field(None, ge=1, description="课程容量上限（不填表示不限）")
-    prerequisite_id: int = Field(None, description="先修课程ID")
 
 
 class CourseSelect(BaseModel):

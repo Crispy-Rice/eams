@@ -33,7 +33,7 @@ def add_teacher(data: TeacherCreate):
     """增：新增教师"""
     te = TeacherModel()
     if te.exists_by_phone(data.phone):
-        raise HTTPException(detatus_code=400, detail="该手机号已存在")
+        raise HTTPException(status_code=400, detail="该手机号已存在")
     if data.score >= 85:
         gangwei = "班主任"
     else:

@@ -1,10 +1,10 @@
 # 文件名：course/model.py
 """
-课程模块 - 数据访问层（含选课、成绩、候补）
+课程模块 - 数据访问层（含选课、成绩）
 
 职责：
-- CourseModel：封装 courses 表 SQL（增删改查 + 容量/先修课/已选人数）
-- StudentCourseModel：封装 student_course 表 SQL（学生选课/退课/成绩/查询/候补）
+- CourseModel：封装 courses 表 SQL（增删改查 + 按课程名查询，关联授课教师）
+- StudentCourseModel：封装 student_course 表 SQL（学生选课/退课/成绩/查询）
 依赖：common.db.Database
 """
 from com.wanhe.common.db import Database
@@ -15,18 +15,13 @@ class CourseModel:
 
     def get_all(self, keyword=''):
         """
-        查询所有课程（关联授课教师名 + 先修课程名 + 已选人数），可按课程名模糊查询
+        查询所有课程（关联授课教师名），可按课程名模糊查询
         :param keyword: 课程名关键字（可选）
-        :return: 课程行字典列表（含 teacher_name/prerequisite_name/enrolled_count）
+        :return: 课程行字典列表（含 teacher_name）
         """
         sql = (
-            "SELECT c.*, "
-            "       t.name AS teacher_name, "
-            "       p.name AS prerequisite_name, "
-            "       (SELECT COUNT(*) FROM student_course sc WHERE sc.course_id = c.id) AS enrolled_count "
-            "FROM courses c "
-            "LEFT JOIN teachers t ON c.teacher_id = t.id "
-            "LEFT JOIN courses p ON c.prerequisite_id = p.id "
+            "SELECT c.*, t.name AS teacher_name "
+            "FROM courses c LEFT JOIN teachers t ON c.teacher_id = t.id "
         )
         params = []
         if keyword:
@@ -41,54 +36,31 @@ class CourseModel:
 
     def get_by_id(self, course_id):
         """
-        按 ID 查询课程（含已选人数和先修课信息）
+        按 ID 查询课程
         :param course_id: 课程 ID
         :return: 课程行 dict；不存在返回 None
         """
         db = Database()
         try:
-            return db.query_one(
-                "SELECT c.*, "
-                "       (SELECT COUNT(*) FROM student_course sc WHERE sc.course_id = c.id) AS enrolled_count "
-                "FROM courses c WHERE c.id = %s",
-                (course_id,)
-            )
+            return db.query_one("SELECT * FROM courses WHERE id = %s", (course_id,))
         finally:
             db.close()
 
-    def get_enrolled_count(self, course_id):
-        """查询某课程已选人数"""
-        db = Database()
-        try:
-            row = db.query_one(
-                "SELECT COUNT(*) AS cnt FROM student_course WHERE course_id = %s",
-                (course_id,)
-            )
-            return row['cnt'] if row else 0
-        finally:
-            db.close()
-
-    def create(self, name, credit, teacher_id, capacity=None, prerequisite_id=None):
+    def create(self, name, credit, teacher_id):
         """
         新增课程
-        :param name: 课程名称
-        :param credit: 学分
-        :param teacher_id: 授课教师 ID（可为 None）
-        :param capacity: 容量上限（None 表示不限）
-        :param prerequisite_id: 先修课程 ID（None 表示无）
         :return: 新课程自增 ID
         """
         db = Database()
         try:
             return db.insert(
-                "INSERT INTO courses (name, credit, teacher_id, capacity, prerequisite_id) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                (name, credit, teacher_id, capacity, prerequisite_id)
+                "INSERT INTO courses (name, credit, teacher_id) VALUES (%s, %s, %s)",
+                (name, credit, teacher_id)
             )
         finally:
             db.close()
 
-    def update(self, course_id, name, credit, teacher_id, capacity=None, prerequisite_id=None):
+    def update(self, course_id, name, credit, teacher_id):
         """
         修改课程
         :return: 受影响行数
@@ -96,16 +68,15 @@ class CourseModel:
         db = Database()
         try:
             return db.execute(
-                "UPDATE courses SET name=%s, credit=%s, teacher_id=%s, capacity=%s, prerequisite_id=%s "
-                "WHERE id=%s",
-                (name, credit, teacher_id, capacity, prerequisite_id, course_id)
+                "UPDATE courses SET name=%s, credit=%s, teacher_id=%s WHERE id=%s",
+                (name, credit, teacher_id, course_id)
             )
         finally:
             db.close()
 
     def delete(self, course_id):
         """
-        删除课程（同时清理选课记录 + 候补记录）
+        删除课程（同时清理选课记录，逐条执行）
         :param course_id: 课程 ID
         :return: 删除的课程行数
         """
@@ -119,8 +90,6 @@ class CourseModel:
 
 class StudentCourseModel:
     """选课表（学生选课）数据访问"""
-
-    # ---- 查询 ----
 
     def get_courses_by_student(self, student_id):
         """
@@ -143,7 +112,7 @@ class StudentCourseModel:
 
     def is_selected(self, student_id, course_id):
         """
-        判断学生是否已选该课程
+        判断学生是否已选该课程（防止重复选课）
         :return: True 表示已选
         """
         db = Database()
@@ -154,24 +123,6 @@ class StudentCourseModel:
             ) is not None
         finally:
             db.close()
-
-    # def has_passed_course(self, student_id, course_id):
-    #     """
-    #     判断学生是否已通过某课程（选了且有成绩 >= 60）
-    #     :return: True 表示已通过
-    #     """
-    #     db = Database()
-    #     try:
-    #         row = db.query_one(
-    #             "SELECT * FROM student_course "
-    #             "WHERE student_id=%s AND course_id=%s AND score IS NOT NULL AND score >= 60",
-    #             (student_id, course_id)
-    #         )
-    #         return row is not None
-    #     finally:
-    #         db.close()
-
-    # ---- 选课 / 退课 ----
 
     def select(self, student_id, course_id):
         """
@@ -200,8 +151,6 @@ class StudentCourseModel:
             )
         finally:
             db.close()
-
-    # ---- 成绩 ----
 
     def set_score(self, student_id, course_id, score):
         """

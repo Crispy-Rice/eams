@@ -43,7 +43,7 @@ def index(username: str = "访客", role: str = "guest"):
     role_map = {"admin": "管理员", "teacher": "教师", "student": "学生"}
     role_name = role_map.get(role, "用户")
     logger.info("访问首页 用户:%s 角色:%s", username, role)
-    return {"message": f"欢迎使用学校教务管理系统，{role_name} {username}！"}
+    return success({"message": f"欢迎使用学校教务管理系统，{role_name} {username}！"})
 
 
 @router.get("/grade-count")  # 路由装饰器：注册 GET 查询接口
