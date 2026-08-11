@@ -444,6 +444,9 @@ async function loadClasses(keyword='') {
     document.getElementById('classBody').innerHTML = list.map(c => `
         <tr><td>${c.id}</td><td>${c.name}</td><td>${c.grade}</td>
         <td>${c.head_teacher_name || '无'}</td>
+        <td>${c.if_youxiu || '否'}</td>
+        <td>${c.student_num ?? 0}</td>
+        <td>${c.graduation_year || '-'}</td>
         <td>
             <button class="btn btn-blue" onclick="openClassModal('edit', ${c.id})">编辑</button>
             <button class="btn btn-red" onclick="delClass(${c.id})">删除</button>
@@ -470,11 +473,27 @@ async function openClassModal(mode, id) {
             <option value="">无班主任</option>
             ${teachers.map(t => `<option value="${t.id}" ${prefill.head_teacher_id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
         </select></div>
+        <div class="field"><label class="field-label">是否为优秀班级</label>
+            <select id="cl_youxiu">
+            <option value="否" ${prefill.if_youxiu === '否' ? 'selected' : ''}>否</option>
+            <option value="是" ${prefill.if_youxiu === '是' ? 'selected' : ''}>是</option>
+        </select></div>
+        <div class="field"><label class="field-label">学生数目</label>
+            <input id="cl_stu_num" type="number" placeholder="学生数目" min="0" value="${prefill.student_num ?? 0}"></div>
+        <div class="field"><label class="field-label">毕业年份</label>
+            <input id="cl_grad_year" type="number" placeholder="毕业年份" min="0" value="${prefill.graduation_year || ''}"></div>
     `);
     modalOnOk = async () => {
         const name = document.getElementById('cl_name').value.trim();
         if (!name) { alert('请填写班级名称'); return; }
-        const body = { name, grade: document.getElementById('cl_grade').value || '高一', head_teacher_id: Number(document.getElementById('cl_head').value) || null };
+        const body = {
+            name,
+            grade: document.getElementById('cl_grade').value || '高一',
+            head_teacher_id: Number(document.getElementById('cl_head').value) || null,
+            if_youxiu: document.getElementById('cl_youxiu').value,
+            student_num: Number(document.getElementById('cl_stu_num').value) || 0,
+            graduation_year: Number(document.getElementById('cl_grad_year').value) || null
+        };
         if (mode === 'add') {
             await api('/classes/add', 'POST', body);
         } else {
