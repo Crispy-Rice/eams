@@ -389,6 +389,9 @@ async function loadClasses(keyword='') {
     document.getElementById('classBody').innerHTML = list.map(c => `
         <tr><td>${c.id}</td><td>${c.name}</td><td>${c.grade}</td>
         <td>${c.head_teacher_name || '无'}</td>
+        <td>${c.if_youxiu || '否'}</td>
+        <td>${c.student_num ?? 0}</td>
+        <td>${c.graduation_year || '-'}</td>
         <td>
             <button class="btn btn-blue" onclick="openClassModal('edit', ${c.id})">编辑</button>
             <button class="btn btn-red" onclick="delClass(${c.id})">删除</button>
@@ -415,11 +418,27 @@ async function openClassModal(mode, id) {
             <option value="">无班主任</option>
             ${teachers.map(t => `<option value="${t.id}" ${prefill.head_teacher_id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
         </select></div>
+        <div class="field"><label class="field-label">是否为优秀班级</label>
+            <select id="cl_youxiu">
+            <option value="否" ${prefill.if_youxiu === '否' ? 'selected' : ''}>否</option>
+            <option value="是" ${prefill.if_youxiu === '是' ? 'selected' : ''}>是</option>
+        </select></div>
+        <div class="field"><label class="field-label">学生数目</label>
+            <input id="cl_stu_num" type="number" placeholder="学生数目" min="0" value="${prefill.student_num ?? 0}"></div>
+        <div class="field"><label class="field-label">毕业年份</label>
+            <input id="cl_grad_year" type="number" placeholder="毕业年份" min="0" value="${prefill.graduation_year || ''}"></div>
     `);
     modalOnOk = async () => {
         const name = document.getElementById('cl_name').value.trim();
         if (!name) { alert('请填写班级名称'); return; }
-        const body = { name, grade: document.getElementById('cl_grade').value || '高一', head_teacher_id: Number(document.getElementById('cl_head').value) || null };
+        const body = {
+            name,
+            grade: document.getElementById('cl_grade').value || '高一',
+            head_teacher_id: Number(document.getElementById('cl_head').value) || null,
+            if_youxiu: document.getElementById('cl_youxiu').value,
+            student_num: Number(document.getElementById('cl_stu_num').value) || 0,
+            graduation_year: Number(document.getElementById('cl_grad_year').value) || null
+        };
         if (mode === 'add') {
             await api('/classes/add', 'POST', body);
         } else {
@@ -499,43 +518,6 @@ async function loadCharts() {
             center: ['50%', '45%'],
             data: (genders || []).map(g => ({ name: g.gender, value: g.cnt })),
             label: { formatter: '{b}: {c} 人 ({d}%)' }
-        }]
-    });
-
-    // 堆叠柱状图：各年级男女生人数
-    const gg = await api('/stats/gender-grade');
-    const ggGrades = [...new Set(gg.map(i => i.grade))];
-    const ggBoys = ggGrades.map(g => (gg.find(i => i.grade === g && i.gender === '男') || {}).cnt || 0);
-    const ggGirls = ggGrades.map(g => (gg.find(i => i.grade === g && i.gender === '女') || {}).cnt || 0);
-    const ggChart = echarts.init(document.getElementById('genderGradeChart'));
-    ggChart.setOption({
-        title: { text: '各年级男女生人数', left: 'center', textStyle: { fontSize: 14 } },
-        tooltip: { trigger: 'axis' },
-        legend: { data: ['男', '女'], bottom: 0 },
-        grid: { left: '8%', right: '8%', bottom: '12%', containLabel: true },
-        xAxis: { type: 'category', data: ggGrades },
-        yAxis: { type: 'value', minInterval: 1 },
-        series: [
-            { name: '男', type: 'bar', stack: 'total', data: ggBoys, itemStyle: { color: '#1890ff' } },
-            { name: '女', type: 'bar', stack: 'total', data: ggGirls, itemStyle: { color: '#f56a00' } }
-        ]
-    });
-
-    // 柱状图：每门课程选课人数排行
-    const courseList = await api('/stats/course-selection');
-    const courseChart = echarts.init(document.getElementById('courseChart'));
-    courseChart.setOption({
-        title: { text: '课程选课人数排行', left: 'center', textStyle: { fontSize: 14 } },
-        tooltip: { trigger: 'axis' },
-        grid: { left: '8%', right: '8%', bottom: '12%', containLabel: true },
-        xAxis: { type: 'category', data: (courseList || []).map(c => c.course_name) },
-        yAxis: { type: 'value', minInterval: 1 },
-        series: [{
-            name: '选课人数',
-            type: 'bar',
-            data: (courseList || []).map(c => c.cnt),
-            itemStyle: { color: '#52c41a' },
-            label: { show: true, position: 'top' }
         }]
     });
 }
