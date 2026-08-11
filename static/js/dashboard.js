@@ -280,14 +280,22 @@ async function delTeacher(id) {
  */
 async function loadCourses(keyword='') {
     const list = await api('/courses/all?keyword=' + encodeURIComponent(keyword));
-    document.getElementById('courseBody').innerHTML = list.map(c => `
-        <tr><td>${c.id}</td><td>${c.name}</td><td>${c.credit}</td>
+    document.getElementById('courseBody').innerHTML = list.map(c => {
+        const enrolled = c.enrolled_count || 0;
+        const cap = c.capacity;
+        const capText = cap ? `${enrolled}/${cap}` : `${enrolled}/不限`;
+        const capStyle = cap && enrolled >= cap ? 'color: #e24b4a; font-weight: 500;' : '';
+        const prereqText = c.prerequisite_name || '无';
+        return `<tr><td>${c.id}</td><td>${c.name}</td><td>${c.credit}</td>
         <td>${c.teacher_name || '未分配'}</td>
+        <td>${prereqText}</td>
+        <td style="${capStyle}">${capText}</td>
         <td>
             <button class="btn btn-blue" onclick="openCourseModal('edit', ${c.id})">编辑</button>
             <button class="btn btn-green" onclick="openSelectCourseModal(${c.id})">选课</button>
             <button class="btn btn-red" onclick="delCourse(${c.id})">删除</button>
-        </td></tr>`).join('');
+        </td></tr>`;
+    }).join('');
 }
 function searchCourses() { loadCourses(document.getElementById('couKeyword').value.trim()); }
 function resetCourses() { document.getElementById('couKeyword').value = ''; loadCourses(); }
@@ -301,15 +309,33 @@ async function openCourseModal(mode, id) {
     // 编辑模式拉取课程详情预填
     let prefill = {};
     if (mode === 'edit') prefill = await api(`/courses/one/${id}`) || {};
-    // 加载教师列表供授课教师下拉
-    const teachers = await api('/teachers/all');
+    // 加载教师列表、课程列表（供先修课下拉）
+    const [teachers, allCourses] = await Promise.all([api('/teachers/all'), api('/courses/all')]);
+    // 先修课下拉：排除自身（编辑模式）和已选自身为先修课的
+    const prereqOptions = allCourses
+        .filter(c => c.id !== id)
+        .map(c => `<option value="${c.id}" ${prefill.prerequisite_id === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
     openModal(mode === 'add' ? '新增课程' : '编辑课程', `
         <div class="field"><input id="c_name" placeholder="课程名称" value="${prefill.name || ''}"></div>
         <div class="field"><input id="c_credit" type="number" placeholder="学分（1-10）" value="${prefill.credit ?? 1}"></div>
-        <div class="field"><select id="c_teacher">
-            <option value="">未分配教师</option>
-            ${teachers.map(t => `<option value="${t.id}" ${prefill.teacher_id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
-        </select></div>
+        <div class="field">
+            <label style="font-size:12px;color:#888;">授课教师</label>
+            <select id="c_teacher">
+                <option value="">未分配教师</option>
+                ${teachers.map(t => `<option value="${t.id}" ${prefill.teacher_id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+            </select>
+        </div>
+        <div class="field">
+            <label style="font-size:12px;color:#888;">容量上限（留空表示不限）</label>
+            <input id="c_capacity" type="number" placeholder="如：30" value="${prefill.capacity || ''}" min="1">
+        </div>
+        <div class="field">
+            <label style="font-size:12px;color:#888;">先修课程（需先学完才能选此课）</label>
+            <select id="c_prereq">
+                <option value="">无</option>
+                ${prereqOptions}
+            </select>
+        </div>
     `);
     modalOnOk = async () => {
         const name = document.getElementById('c_name').value.trim();
@@ -317,7 +343,16 @@ async function openCourseModal(mode, id) {
         const creditInput = document.getElementById('c_credit').value;
         const credit = Number(creditInput);
         if (!creditInput || isNaN(credit) || credit < 1 || credit > 10) { alert('学分需为 1-10 之间的数字'); return; }
-        const body = { name, credit, teacher_id: Number(document.getElementById('c_teacher').value) || null };
+        const capVal = document.getElementById('c_capacity').value.trim();
+        const capacity = capVal ? Number(capVal) : null;
+        if (capVal && (isNaN(capacity) || capacity < 1)) { alert('容量需为大于 0 的数字'); return; }
+        const prereqVal = document.getElementById('c_prereq').value;
+        const body = {
+            name, credit,
+            teacher_id: Number(document.getElementById('c_teacher').value) || null,
+            capacity: capacity,
+            prerequisite_id: prereqVal ? Number(prereqVal) : null
+        };
         if (mode === 'add') {
             await api('/courses/add', 'POST', body);
         } else {
@@ -334,7 +369,16 @@ async function openCourseModal(mode, id) {
  */
 async function openSelectCourseModal(courseId) {
     const students = await api('/students/all');
+    // 获取课程信息，用于显示容量状态
+    let courseInfo = '';
+    try {
+        const course = await api(`/courses/one/${courseId}`);
+        if (course && course.capacity) {
+            courseInfo = `<div style="font-size:12px;color:#888;margin-bottom:8px;">当前 ${course.enrolled_count || 0}/${course.capacity} 人</div>`;
+        }
+    } catch(e) { /* ignore */ }
     openModal('选课（选择学生）', `
+        ${courseInfo}
         <div class="field"><select id="c_student">
             <option value="">请选择学生</option>
             ${students.map(s => `<option value="${s.id}">${s.name}（学号${s.id}）</option>`).join('')}
@@ -343,7 +387,18 @@ async function openSelectCourseModal(courseId) {
     modalOnOk = async () => {
         const sid = document.getElementById('c_student').value;
         if (!sid) { alert('请选择学生'); return; }
-        await api(`/courses/select/${sid}`, 'POST', { course_id: courseId });
+        // 用原生 fetch 以便获取 msg 信息
+        const resp = await fetch(`/courses/select/${sid}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ course_id: courseId })
+        });
+        const json = await resp.json();
+        if (json.code === 0) {
+            alert(json.msg || '选课成功');
+        } else {
+            alert(json.msg || '操作失败');
+        }
         closeModal();
         loadCourses();
     };
@@ -389,9 +444,6 @@ async function loadClasses(keyword='') {
     document.getElementById('classBody').innerHTML = list.map(c => `
         <tr><td>${c.id}</td><td>${c.name}</td><td>${c.grade}</td>
         <td>${c.head_teacher_name || '无'}</td>
-        <td>${c.if_youxiu || '否'}</td>
-        <td>${c.student_num ?? 0}</td>
-        <td>${c.graduation_year || '-'}</td>
         <td>
             <button class="btn btn-blue" onclick="openClassModal('edit', ${c.id})">编辑</button>
             <button class="btn btn-red" onclick="delClass(${c.id})">删除</button>
@@ -418,27 +470,11 @@ async function openClassModal(mode, id) {
             <option value="">无班主任</option>
             ${teachers.map(t => `<option value="${t.id}" ${prefill.head_teacher_id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
         </select></div>
-        <div class="field"><label class="field-label">是否为优秀班级</label>
-            <select id="cl_youxiu">
-            <option value="否" ${prefill.if_youxiu === '否' ? 'selected' : ''}>否</option>
-            <option value="是" ${prefill.if_youxiu === '是' ? 'selected' : ''}>是</option>
-        </select></div>
-        <div class="field"><label class="field-label">学生数目</label>
-            <input id="cl_stu_num" type="number" placeholder="学生数目" min="0" value="${prefill.student_num ?? 0}"></div>
-        <div class="field"><label class="field-label">毕业年份</label>
-            <input id="cl_grad_year" type="number" placeholder="毕业年份" min="0" value="${prefill.graduation_year || ''}"></div>
     `);
     modalOnOk = async () => {
         const name = document.getElementById('cl_name').value.trim();
         if (!name) { alert('请填写班级名称'); return; }
-        const body = {
-            name,
-            grade: document.getElementById('cl_grade').value || '高一',
-            head_teacher_id: Number(document.getElementById('cl_head').value) || null,
-            if_youxiu: document.getElementById('cl_youxiu').value,
-            student_num: Number(document.getElementById('cl_stu_num').value) || 0,
-            graduation_year: Number(document.getElementById('cl_grad_year').value) || null
-        };
+        const body = { name, grade: document.getElementById('cl_grade').value || '高一', head_teacher_id: Number(document.getElementById('cl_head').value) || null };
         if (mode === 'add') {
             await api('/classes/add', 'POST', body);
         } else {
