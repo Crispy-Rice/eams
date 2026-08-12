@@ -161,6 +161,30 @@ tbody tr:last-child td { border-bottom: none; }
 }
 .modal-result { margin-top: 8px; font-size: 14px; color: #666; }
 
+/* ===== 学生选课管理（弹框内课程行） ===== */
+.course-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.course-row:last-child { border-bottom: none; }
+.cr-info { font-size: 14px; color: #333; flex: 1; }
+.cr-actions { display: flex; align-items: center; gap: 8px; }
+.cr-score {
+    width: 84px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+}
+.cr-score:focus { border-color: #1890ff; box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.12); }
+
 /* ===== 分页 ===== */
 .pagination {
     margin-top: 16px;
