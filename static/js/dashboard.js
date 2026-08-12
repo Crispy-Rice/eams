@@ -76,16 +76,18 @@ async function loadStudents(keyword) {
     // 删除后当前页可能为空：回退一页重载
     if (stuPage > 1 && list.length === 0) { stuPage--; loadStudents(keyword); return; }
     const tbody = document.getElementById('studentBody');
-    // 渲染学生行（含编辑/分班/选老师/删除操作）
+    // 渲染学生行（含编辑/分班/选老师/学籍状态/删除操作）
     tbody.innerHTML = list.map(s => `
         <tr>
             <td>${s.id}</td><td>${s.name}</td><td>${s.gender}</td>
             <td>${s.age}</td><td>${s.grade}</td><td>${s.class_name || '未分班'}</td>
             <td>${s.teacher_name || '未选老师'}</td><td>${s.course_count || 0}</td>
+            <td>${s.status || '在读'}</td>
             <td>
                 <button class="btn btn-blue" onclick="openStudentModal('edit', ${s.id})">编辑</button>
                 <button class="btn btn-orange" onclick="openAssignClassModal(${s.id})">分班</button>
                 <button class="btn btn-green" onclick="openAssignTeacherModal(${s.id})">选老师</button>
+                <button class="btn btn-gray" onclick="openStatusModal(${s.id})">学籍</button>
                 <button class="btn btn-red" onclick="delStudent(${s.id})">删除</button>
             </td>
         </tr>`).join('');
@@ -210,6 +212,29 @@ async function delStudent(id) {
     loadStudents();
 }
 
+/**
+ * 打开学籍状态弹框：下拉选择 在读/休学/复学/退学 → 调用 PUT /students/status/{id}
+ * 对应后端 StudentStatus VO（status 须在 status_choices 之内）
+ * @param {number} id 学生 ID
+ */
+async function openStatusModal(id) {
+    // 拉取当前学生，预显现有学籍状态
+    const stu = await api(`/students/one/${id}`) || {};
+    const cur = stu.status || '在读';
+    const options = ['在读', '休学', '复学', '退学']
+        .map(v => `<option value="${v}" ${v === cur ? 'selected' : ''}>${v}</option>`).join('');
+    openModal('设置学籍状态', `
+        <div style="margin-bottom:10px;font-size:14px;color:#666;">当前状态：<b>${cur}</b></div>
+        <div class="field"><select id="s_status">${options}</select></div>
+    `);
+    modalOnOk = async () => {
+        const status = document.getElementById('s_status').value;
+        await api(`/students/status/${id}`, 'PUT', { status });
+        closeModal();
+        loadStudents();
+    };
+}
+
 // ===== 教师管理 =====
 /**
  * 加载教师列表（支持关键字查询）
@@ -220,6 +245,7 @@ async function loadTeachers(keyword='') {
     document.getElementById('teacherBody').innerHTML = list.map(t => `
         <tr><td>${t.id}</td><td>${t.name}</td><td>${t.gender}</td>
         <td>${t.age}</td><td>${t.subject}</td><td>${t.phone}</td>
+        <td>${t.score ?? 0}</td><td>${t.gangwei || '任课教师'}</td>
         <td>
             <button class="btn btn-blue" onclick="openTeacherModal('edit', ${t.id})">编辑</button>
             <button class="btn btn-red" onclick="delTeacher(${t.id})">删除</button>
@@ -246,16 +272,20 @@ async function openTeacherModal(mode, id) {
         <div class="field"><input id="t_age" type="number" placeholder="年龄（20-70）" value="${prefill.age ?? 30}"></div>
         <div class="field"><input id="t_subject" placeholder="教授科目" value="${prefill.subject || ''}"></div>
         <div class="field"><input id="t_phone" placeholder="联系电话" value="${prefill.phone || ''}"></div>
+        <div class="field"><input id="t_score" type="number" placeholder="教学评估分数（0-100）" value="${prefill.score ?? 0}" min="0" max="100"></div>
     `);
     modalOnOk = async () => {
         const name = document.getElementById('t_name').value.trim();
         const subject = document.getElementById('t_subject').value.trim();
         const ageInput = document.getElementById('t_age').value;
+        const scoreInput = document.getElementById('t_score').value;
         if (!name) { alert('请填写教师姓名'); return; }
         if (!subject) { alert('请填写教授科目'); return; }
         const age = Number(ageInput);
         if (!ageInput || isNaN(age) || age < 20 || age > 70) { alert('年龄需为 20-70 之间的数字'); return; }
-        const body = { name, gender: document.getElementById('t_gender').value, age, subject, phone: document.getElementById('t_phone').value.trim() };
+        const score = scoreInput === '' ? 0 : Number(scoreInput);
+        if (isNaN(score) || score < 0 || score > 100) { alert('教学评估分数需为 0-100 之间的数字'); return; }
+        const body = { name, gender: document.getElementById('t_gender').value, age, subject, phone: document.getElementById('t_phone').value.trim(), score };
         if (mode === 'add') {
             await api('/teachers/add', 'POST', body);
         } else {
@@ -404,27 +434,78 @@ async function openSelectCourseModal(courseId) {
     };
 }
 
-/** 打开"查看学生选课"弹框：下拉选学生 → 展示其已选课程（只读） */
+/**
+ * 打开"学生选课管理"弹框：下拉选学生 → 展示其已选课程（可退课 / 登记成绩）
+ * 退课：DELETE /courses/unselect/{student_id}（CourseSelect 体）
+ * 成绩：PUT   /courses/score/{student_id}（ScoreUpdate 体）
+ */
 async function openViewStudentCourses() {
     const students = await api('/students/all');
-    openModal('查看学生选课', `
+    openModal('学生选课管理', `
         <div class="field"><select id="v_student">
             <option value="">请选择学生</option>
             ${students.map(s => `<option value="${s.id}">${s.name}（学号${s.id}）</option>`).join('')}
         </select></div>
         <div id="v_result" class="modal-result"></div>
     `);
-    // 确定：拉取该学生已选课程并渲染到弹框内
+    // 确定：拉取该学生已选课程并渲染到弹框内（保持弹框打开，便于继续操作）
     modalOnOk = async () => {
         const sid = document.getElementById('v_student').value;
         if (!sid) { alert('请选择学生'); return; }
-        const list = await api(`/courses/student/${sid}`);
-        const stuName = document.getElementById('v_student').selectedOptions[0].textContent;
-        document.getElementById('v_result').innerHTML = list.length
-            ? `<b>${stuName} 已选课程：</b><br>` +
-              list.map(c => `· ${c.course_name}（${c.teacher_name || '未分配'}，${c.credit}学分）`).join('<br>')
-            : `${stuName} 未选任何课程`;
+        await renderStudentCourses(sid);
     };
+}
+
+/**
+ * 渲染某学生的已选课程（含退课 / 登记成绩控件），保持弹框打开
+ * @param {number} sid 学生 ID
+ */
+async function renderStudentCourses(sid) {
+    const stuName = document.getElementById('v_student').selectedOptions[0].textContent;
+    const list = await api(`/courses/student/${sid}`);
+    const box = document.getElementById('v_result');
+    if (!list.length) {
+        box.innerHTML = `${stuName} 未选任何课程`;
+        return;
+    }
+    box.innerHTML = `<div style="margin-bottom:8px;"><b>${stuName}</b> 已选 ${list.length} 门课程：</div>` +
+        list.map(c => `
+            <div class="course-row">
+                <div class="cr-info">${c.course_name}（${c.teacher_name || '未分配'}，${c.credit}学分）</div>
+                <div class="cr-actions">
+                    <input id="score_${c.course_id}" class="cr-score" type="number" min="0" max="100" step="0.01"
+                           placeholder="成绩" value="${c.score != null ? c.score : ''}">
+                    <button class="btn btn-blue" onclick="setScore(${sid}, ${c.course_id})">登记成绩</button>
+                    <button class="btn btn-red" onclick="unselectCourse(${sid}, ${c.course_id})">退课</button>
+                </div>
+            </div>`).join('');
+}
+
+/**
+ * 为某学生的某门课登记/修改成绩
+ * @param {number} sid       学生 ID
+ * @param {number} courseId  课程 ID
+ */
+async function setScore(sid, courseId) {
+    const input = document.getElementById('score_' + courseId);
+    const score = Number(input.value);
+    if (input.value.trim() === '' || isNaN(score) || score < 0 || score > 100) {
+        alert('成绩需为 0-100 之间的数字'); return;
+    }
+    await api(`/courses/score/${sid}`, 'PUT', { course_id: courseId, score });
+    alert('成绩登记成功');
+    renderStudentCourses(sid);
+}
+
+/**
+ * 某学生退课
+ * @param {number} sid       学生 ID
+ * @param {number} courseId  课程 ID
+ */
+async function unselectCourse(sid, courseId) {
+    if (!confirm('确定退选该课程？')) return;
+    await api(`/courses/unselect/${sid}`, 'DELETE', { course_id: courseId });
+    renderStudentCourses(sid);
 }
 
 /** 删除课程：确认后调用删除接口并刷新 */
@@ -444,6 +525,9 @@ async function loadClasses(keyword='') {
     document.getElementById('classBody').innerHTML = list.map(c => `
         <tr><td>${c.id}</td><td>${c.name}</td><td>${c.grade}</td>
         <td>${c.head_teacher_name || '无'}</td>
+        <td>${c.if_youxiu || '否'}</td>
+        <td>${c.student_num ?? 0}</td>
+        <td>${c.graduation_year || '-'}</td>
         <td>
             <button class="btn btn-blue" onclick="openClassModal('edit', ${c.id})">编辑</button>
             <button class="btn btn-red" onclick="delClass(${c.id})">删除</button>
@@ -470,11 +554,27 @@ async function openClassModal(mode, id) {
             <option value="">无班主任</option>
             ${teachers.map(t => `<option value="${t.id}" ${prefill.head_teacher_id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
         </select></div>
+        <div class="field"><label class="field-label">是否为优秀班级</label>
+            <select id="cl_youxiu">
+            <option value="否" ${prefill.if_youxiu === '否' ? 'selected' : ''}>否</option>
+            <option value="是" ${prefill.if_youxiu === '是' ? 'selected' : ''}>是</option>
+        </select></div>
+        <div class="field"><label class="field-label">学生数目</label>
+            <input id="cl_stu_num" type="number" placeholder="学生数目" min="0" value="${prefill.student_num ?? 0}"></div>
+        <div class="field"><label class="field-label">毕业年份</label>
+            <input id="cl_grad_year" type="number" placeholder="毕业年份" min="0" value="${prefill.graduation_year || ''}"></div>
     `);
     modalOnOk = async () => {
         const name = document.getElementById('cl_name').value.trim();
         if (!name) { alert('请填写班级名称'); return; }
-        const body = { name, grade: document.getElementById('cl_grade').value || '高一', head_teacher_id: Number(document.getElementById('cl_head').value) || null };
+        const body = {
+            name,
+            grade: document.getElementById('cl_grade').value || '高一',
+            head_teacher_id: Number(document.getElementById('cl_head').value) || null,
+            if_youxiu: document.getElementById('cl_youxiu').value,
+            student_num: Number(document.getElementById('cl_stu_num').value) || 0,
+            graduation_year: Number(document.getElementById('cl_grad_year').value) || null
+        };
         if (mode === 'add') {
             await api('/classes/add', 'POST', body);
         } else {

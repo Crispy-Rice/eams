@@ -101,7 +101,7 @@
                             <button class="btn btn-blue" onclick="openStudentModal('add')">新增学生</button>
                         </div>
                         <table>
-                            <thead><tr><th>ID</th><th>姓名</th><th>性别</th><th>年龄</th><th>年级</th><th>班级</th><th>老师</th><th>选课数</th><th>操作</th></tr></thead>
+                            <thead><tr><th>ID</th><th>姓名</th><th>性别</th><th>年龄</th><th>年级</th><th>班级</th><th>老师</th><th>选课数</th><th>学籍状态</th><th>操作</th></tr></thead>
                             <tbody id="studentBody"></tbody>
                         </table>
                         <div class="pagination" id="stuPager"></div>
@@ -119,7 +119,7 @@
                             <button class="btn btn-blue" onclick="openTeacherModal('add')">新增教师</button>
                         </div>
                         <table>
-                            <thead><tr><th>ID</th><th>姓名</th><th>性别</th><th>年龄</th><th>科目</th><th>电话</th><th>操作</th></tr></thead>
+                            <thead><tr><th>ID</th><th>姓名</th><th>性别</th><th>年龄</th><th>科目</th><th>电话</th><th>评分</th><th>岗位</th><th>操作</th></tr></thead>
                             <tbody id="teacherBody"></tbody>
                         </table>
                     </div>
@@ -133,11 +133,11 @@
                             <input id="couKeyword" placeholder="按课程名搜索">
                             <button class="btn" onclick="searchCourses()">查询</button>
                             <button class="btn" onclick="resetCourses()">重置</button>
-                            <button class="btn btn-green" onclick="openViewStudentCourses()">查看学生选课</button>
+                            <button class="btn btn-green" onclick="openViewStudentCourses()">学生选课管理</button>
                             <button class="btn btn-blue" onclick="openCourseModal('add')">新增课程</button>
                         </div>
                         <table>
-                            <thead><tr><th>ID</th><th>课程名</th><th>学分</th><th>授课教师</th><th>先修课</th><th>容量</th><th>操作</th></tr></thead>
+                            <thead><tr><th>ID</th><th>课程名</th><th>学分</th><th>授课教师</th><th>操作</th></tr></thead>
                             <tbody id="courseBody"></tbody>
                         </table>
                     </div>
@@ -154,7 +154,7 @@
                             <button class="btn btn-blue" onclick="openClassModal('add')">新增班级</button>
                         </div>
                         <table>
-                            <thead><tr><th>ID</th><th>班级名</th><th>年级</th><th>班主任</th><th>操作</th></tr></thead>
+                            <thead><tr><th>ID</th><th>班级名</th><th>年级</th><th>班主任</th><th>是否为优秀班级</th><th>学生数量</th><th>毕业年份</th><th>操作</th></tr></thead>
                             <tbody id="classBody"></tbody>
                         </table>
                     </div>

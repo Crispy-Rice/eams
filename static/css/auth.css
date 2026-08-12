@@ -48,3 +48,15 @@ body {
 }
 .btn:hover { background: #40a9ff; }
 .btn:active { background: #096dd9; }
+
+/* 验证码：输入框 + 图片 横向排列 */
+.captcha-row { display: flex; gap: 10px; align-items: center; }
+.captcha-row input { flex: 1; }
+.captcha-img {
+    width: 110px;
+    height: 40px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+}

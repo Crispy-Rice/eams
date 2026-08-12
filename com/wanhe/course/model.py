@@ -15,13 +15,16 @@ class CourseModel:
 
     def get_all(self, keyword=''):
         """
-        查询所有课程（关联授课教师名），可按课程名模糊查询
+        查询所有课程（关联授课教师名、先修课名、已选人数），可按课程名模糊查询
         :param keyword: 课程名关键字（可选）
-        :return: 课程行字典列表（含 teacher_name）
+        :return: 课程行字典列表（含 teacher_name / prerequisite_name / enrolled_count）
         """
         sql = (
-            "SELECT c.*, t.name AS teacher_name "
+            "SELECT c.*, t.name AS teacher_name, "
+            "p.name AS prerequisite_name, "
+            "(SELECT COUNT(*) FROM student_course sc WHERE sc.course_id = c.id) AS enrolled_count "
             "FROM courses c LEFT JOIN teachers t ON c.teacher_id = t.id "
+            "LEFT JOIN courses p ON c.prerequisite_id = p.id "
         )
         params = []
         if keyword:
@@ -46,7 +49,7 @@ class CourseModel:
         finally:
             db.close()
 
-    def create(self, name, credit, teacher_id):
+    def create(self, name, credit, teacher_id, capacity=None, prerequisite_id=None):
         """
         新增课程
         :return: 新课程自增 ID
@@ -54,13 +57,14 @@ class CourseModel:
         db = Database()
         try:
             return db.insert(
-                "INSERT INTO courses (name, credit, teacher_id) VALUES (%s, %s, %s)",
-                (name, credit, teacher_id)
+                "INSERT INTO courses (name, credit, teacher_id, capacity, prerequisite_id) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (name, credit, teacher_id, capacity, prerequisite_id)
             )
         finally:
             db.close()
 
-    def update(self, course_id, name, credit, teacher_id):
+    def update(self, course_id, name, credit, teacher_id, capacity=None, prerequisite_id=None):
         """
         修改课程
         :return: 受影响行数
@@ -68,9 +72,22 @@ class CourseModel:
         db = Database()
         try:
             return db.execute(
-                "UPDATE courses SET name=%s, credit=%s, teacher_id=%s WHERE id=%s",
-                (name, credit, teacher_id, course_id)
+                "UPDATE courses SET name=%s, credit=%s, teacher_id=%s, "
+                "capacity=%s, prerequisite_id=%s WHERE id=%s",
+                (name, credit, teacher_id, capacity, prerequisite_id, course_id)
             )
+        finally:
+            db.close()
+
+    def count_enrolled(self, course_id):
+        """统计某课程已选人数（用于容量上限校验）"""
+        db = Database()
+        try:
+            row = db.query_one(
+                "SELECT COUNT(*) AS cnt FROM student_course WHERE course_id = %s",
+                (course_id,)
+            )
+            return row["cnt"] if row else 0
         finally:
             db.close()
 

@@ -1,4 +1,9 @@
+# 文件名：teacher/router.py
+"""
+教师模块：教师增删改查
 
+职责：定义 /teachers 前缀下端点，存在性校验后委托 TeacherModel
+"""
 import logging
 
 from fastapi import APIRouter, HTTPException
@@ -30,27 +35,18 @@ def get_teacher(teacher_id: int):
 
 @router.post("/add")  # 路由装饰器：注册 POST 新增接口
 def add_teacher(data: TeacherCreate):
-    """增：新增教师"""
-    te = TeacherModel()
-    if te.exists_by_phone(data.phone):
-        raise HTTPException(status_code=400, detail="该手机号已存在")
-    if data.score >= 85:
-        gangwei = "班主任"
-    else:
-        gangwei = "任课教师"
+    """增：新增教师（同名教师已存在时，由模型层抛出"教师已存在，插入失败"）"""
     new_id = TeacherModel().create(
         name=data.name,
         gender=data.gender,
         age=data.age,
         subject=data.subject,
-        phone=data.phone,#顺序可变
+        phone=data.phone,
         score=data.score,
-        gangwei=gangwei,
-
-
+        gangwei=data.gangwei,
     )
-    logger.info("新增教师 id:%s 姓名:%s", new_id, data.name)
-    return success({"id": new_id}, msg="新增成功")
+    logger.info("新增教师 id:%s 姓名:%s 岗位:%s", new_id, data.name, data.gangwei)
+    return success({"id": new_id, "gangwei": data.gangwei}, msg="新增成功")
 
 
 @router.put("/update/{teacher_id}")  # 路由装饰器：注册 PUT 修改接口
@@ -58,14 +54,11 @@ def update_teacher(teacher_id: int, data: TeacherUpdate):
     """改：修改教师信息"""
     if TeacherModel().get_by_id(teacher_id) is None:
         raise HTTPException(status_code=404, detail="教师不存在")
-    if data.score >= 85:
-        gangwei = "班主任"
-    else:
-        gangwei = "任课教师"
     TeacherModel().update(
-        teacher_id, data.name, data.gender, data.age, data.subject, data.phone,data.score,gangwei#顺序不能变
+        teacher_id, data.name, data.gender, data.age, data.subject, data.phone,
+        data.score, data.gangwei,
     )
-    logger.info("修改教师 id:%s", teacher_id)
+    logger.info("修改教师 id:%s 岗位:%s", teacher_id, data.gangwei)
     return success(msg="修改成功")
 
 
