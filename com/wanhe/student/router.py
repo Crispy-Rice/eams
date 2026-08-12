@@ -141,7 +141,7 @@ def student_status(student_id: int, info: StudentStatus):
         raise HTTPException(status_code=404, detail="学生不存在")
     # 判断学生的学籍状态是否在在读，休学，复学，退学之中
     if info.status not in StudentModel.status_choices:
-        raise HTTPException(status_code=404, detail="学生学籍状态填写不正确！只能填写“在读，休学，复学，退学")
+        raise HTTPException(status_code=400, detail="学生学籍状态填写不正确！只能填写“在读，休学，复学，退学")
 
     # 存放旧状态（query_one 返回字典）
     old_status = student["status"]
@@ -154,4 +154,4 @@ def student_status(student_id: int, info: StudentStatus):
         student_id,old_status,info.status
     )
 
-    return success(data={"id": student_id, "old_status": old_status, "new_status": info.status}, msg={"学生学籍状态修改成功"})
+    return success(data={"id": student_id, "old_status": old_status, "new_status": info.status}, msg="学生学籍状态修改成功")

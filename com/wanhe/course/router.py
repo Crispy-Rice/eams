@@ -45,7 +45,9 @@ def add_course(data: CourseCreate):
     """增：新增课程（若指定授课教师，先验证存在）"""
     if data.teacher_id and TeacherModel().get_by_id(data.teacher_id) is None:
         raise HTTPException(status_code=404, detail="授课教师不存在")
-    new_id = CourseModel().create(data.name, data.credit, data.teacher_id)
+    new_id = CourseModel().create(
+        data.name, data.credit, data.teacher_id, data.capacity, data.prerequisite_id
+    )
     logger.info("新增课程 id:%s 名称:%s", new_id, data.name)
     return success({"id": new_id}, msg="新增成功")
 
@@ -55,7 +57,9 @@ def update_course(course_id: int, data: CourseUpdate):
     """改：修改课程"""
     if CourseModel().get_by_id(course_id) is None:
         raise HTTPException(status_code=404, detail="课程不存在")
-    CourseModel().update(course_id, data.name, data.credit, data.teacher_id)
+    CourseModel().update(
+        course_id, data.name, data.credit, data.teacher_id, data.capacity, data.prerequisite_id
+    )
     logger.info("修改课程 id:%s", course_id)
     return success(msg="修改成功")
 
@@ -82,11 +86,16 @@ def get_student_courses(student_id: int):
 
 @router.post("/select/{student_id}")  # 路由装饰器：注册 POST 新增接口
 def select_course(student_id: int, data: CourseSelect):
-    """选课：学生选一门课程（不能重复选）"""
+    """选课：学生选一门课程（不能重复选；超出容量上限则拒绝）"""
     if StudentModel().get_by_id(student_id) is None:
         raise HTTPException(status_code=404, detail="学生不存在")
-    if CourseModel().get_by_id(data.course_id) is None:
+    course = CourseModel().get_by_id(data.course_id)
+    if course is None:
         raise HTTPException(status_code=404, detail="课程不存在")
+    # 容量上限校验：capacity 非空且已选人数 >= 上限时拒绝（前端容量提示的后端兜底）
+    capacity = course.get("capacity")
+    if capacity is not None and CourseModel().count_enrolled(data.course_id) >= capacity:
+        raise HTTPException(status_code=400, detail="课程已达到容量上限，无法继续选课")
     if StudentCourseModel().is_selected(student_id, data.course_id):
         raise HTTPException(status_code=400, detail="该课程已选过，不能重复选")
     StudentCourseModel().select(student_id, data.course_id)

@@ -137,8 +137,8 @@ INSERT INTO student_course (student_id, course_id) VALUES
 INSERT INTO users (username, password, role) VALUES
     ('admin', 'admin123', 'admin');
 
--- 给学生表追加学籍状态字段
-ALTER TABLE students ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT '在校' COMMENT '学籍状态：在校/休学/复学/退学';
+-- 给学生表追加学籍状态字段（默认值须与代码 StudentModel.status_choices 一致：在读/休学/复学/退学）
+ALTER TABLE students ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT '在读' COMMENT '学籍状态：在读/休学/复学/退学';
 
 ---- ============================================================
 ---- 兼容老库：若教师表缺少 score/gangwei 字段则自动补全
