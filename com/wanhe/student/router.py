@@ -25,11 +25,11 @@ def list_students(keyword: str = ""):
 
 
 @router.get("/page")
-def list_students_page(keyword: str = "", page: int = 1, page_size: int = 10):
+def list_students_page(keyword: str = "", grade: str = "", page: int = 1, page_size: int = 10):
     '''
-    分页
+    分页（支持按姓名关键字、年级筛选）
     '''
-    return success(StudentModel().get_page(keyword, page, page_size))
+    return success(StudentModel().get_page(keyword, grade, page, page_size))
 
 
 @router.get("/one/{student_id}")

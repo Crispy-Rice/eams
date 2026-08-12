@@ -45,10 +45,11 @@ class StudentModel:
             db.close()
 
                                            # 一夜展示的数据数量
-    def get_page(self, keyword='', page=1, page_size=10):
+    def get_page(self, keyword='', grade='', page=1, page_size=10):
         '''
         分页，每页存放数据量
         :param keyword: 关键字
+        :param grade: 年级筛选
         :param page: 页数
         :param page_size: 每页的数据量
         '''
@@ -61,6 +62,9 @@ class StudentModel:
         if keyword:
             where += " where s.name like %s"
             params.append(f"%{keyword}%")
+        if grade:
+            where += " and s.grade = %s" if where else " where s.grade = %s"
+            params.append(grade)
         db=Database()
         try:
             total = db.query_one(

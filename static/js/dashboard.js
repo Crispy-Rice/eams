@@ -64,14 +64,16 @@ let stuPage = 1;             // 学生列表当前页码
 const STU_PAGE_SIZE = 10;    // 每页条数（与后端 /students/page 默认一致）
 
 /**
- * 加载学生列表（分页 + 关键字查询）
+ * 加载学生列表（分页 + 关键字查询 + 年级筛选）
  * @param {string} keyword 姓名关键字（省略时读输入框 stuKeyword）
  */
 async function loadStudents(keyword) {
     // 未显式传 keyword 时读查询输入框
     if (keyword === undefined) keyword = document.getElementById('stuKeyword').value.trim();
-    // 调用分页接口（page/page_size/关键字），返回 {total, items}
-    const data = await api(`/students/page?keyword=${encodeURIComponent(keyword)}&page=${stuPage}&page_size=${STU_PAGE_SIZE}`);
+    // 读取年级筛选（空串 = 全部年级）
+    const grade = document.getElementById('stuGrade').value;
+    // 调用分页接口（page/page_size/关键字/年级），返回 {total, items}
+    const data = await api(`/students/page?keyword=${encodeURIComponent(keyword)}&grade=${encodeURIComponent(grade)}&page=${stuPage}&page_size=${STU_PAGE_SIZE}`);
     const list = data.items || [];
     // 删除后当前页可能为空：回退一页重载
     if (stuPage > 1 && list.length === 0) { stuPage--; loadStudents(keyword); return; }
@@ -106,10 +108,26 @@ function renderStuPager(total) {
 }
 /** 跳转到指定页并重载学生列表 */
 function gotoStuPage(p) { stuPage = p; loadStudents(); }
-/** 学生查询：回到第 1 页后按关键字加载 */
+/** 学生查询：回到第 1 页后按关键字 + 年级加载 */
 function searchStudents() { stuPage = 1; loadStudents(document.getElementById('stuKeyword').value.trim()); }
-/** 学生重置：清空关键字并回到第 1 页 */
-function resetStudents() { document.getElementById('stuKeyword').value = ''; stuPage = 1; loadStudents(); }
+/** 学生重置：清空关键字与年级并回到第 1 页 */
+function resetStudents() {
+    document.getElementById('stuKeyword').value = '';
+    document.getElementById('stuGrade').value = '';
+    stuPage = 1;
+    loadStudents();
+}
+
+/**
+ * 加载年级下拉选项（数据源：/stats/grade-count，含"全部年级"占位）
+ */
+async function loadGradeOptions() {
+    const sel = document.getElementById('stuGrade');
+    if (!sel) return;
+    const grades = await api('/stats/grade-count');
+    sel.innerHTML = '<option value="">全部年级</option>' +
+        (grades || []).map(g => `<option value="${g.grade}">${g.grade}</option>`).join('');
+}
 
 /**
  * 打开新增/编辑学生弹框
@@ -659,8 +677,8 @@ async function loadCharts() {
 }
 
 // ===== 初始化加载 =====
-// 页面加载即并行加载首页统计、图表与四个管理列表
-loadStats(); loadCharts(); loadStudents(); loadTeachers(); loadCourses(); loadClasses();
+// 页面加载即并行加载首页统计、图表、年级选项与四个管理列表
+loadStats(); loadCharts(); loadGradeOptions(); loadStudents(); loadTeachers(); loadCourses(); loadClasses();
 
 
 
